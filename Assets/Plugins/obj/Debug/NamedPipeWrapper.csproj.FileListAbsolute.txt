@@ -1,0 +1,11 @@
+C:\Users\Administrator\Desktop\named-pipe-wrapper\NamedPipeWrapper\bin\Debug\NamedPipeWrapper.XML
+C:\Users\Administrator\Desktop\named-pipe-wrapper\NamedPipeWrapper\bin\Debug\NamedPipeWrapper.dll
+C:\Users\Administrator\Desktop\named-pipe-wrapper\NamedPipeWrapper\bin\Debug\NamedPipeWrapper.pdb
+C:\Users\Administrator\Desktop\named-pipe-wrapper\NamedPipeWrapper\obj\Debug\NamedPipeWrapper.dll
+C:\Users\Administrator\Desktop\named-pipe-wrapper\NamedPipeWrapper\obj\Debug\NamedPipeWrapper.pdb
+E:\Personal\donNet\named-pipe-wrapper\NamedPipeWrapper\bin\Debug\NamedPipeWrapper.XML
+E:\Personal\donNet\named-pipe-wrapper\NamedPipeWrapper\bin\Debug\NamedPipeWrapper.dll
+E:\Personal\donNet\named-pipe-wrapper\NamedPipeWrapper\bin\Debug\NamedPipeWrapper.pdb
+E:\Personal\donNet\named-pipe-wrapper\NamedPipeWrapper\obj\Debug\NamedPipeWrapper.dll
+E:\Personal\donNet\named-pipe-wrapper\NamedPipeWrapper\obj\Debug\NamedPipeWrapper.pdb
+E:\Personal\donNet\named-pipe-wrapper\NamedPipeWrapper\obj\Debug\NamedPipeWrapper.csprojResolveAssemblyReference.cache

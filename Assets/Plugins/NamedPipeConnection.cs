@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using NamedPipeWrapper.IO;
 using NamedPipeWrapper.Threading;
-using System.Collections.Concurrent;
+//using System.Collections.Concurrent;
 
 namespace NamedPipeWrapper
 {
@@ -28,7 +28,7 @@ namespace NamedPipeWrapper
         /// <summary>
         /// Gets the connection's name.
         /// </summary>
-        public string Name { get; }
+        public string Name { get; private set; }
 
         /// <summary>
         /// Gets a value indicating whether the pipe is connected or not.
@@ -56,7 +56,8 @@ namespace NamedPipeWrapper
         /// <summary>
         /// To support Multithread, we should use BlockingCollection.
         /// </summary>
-        private readonly BlockingCollection<TWrite> _writeQueue = new BlockingCollection<TWrite>();
+        //private readonly BlockingCollection<TWrite> _writeQueue = new BlockingCollection<TWrite>();
+        private readonly Queue<TWrite> _writeQueue = new Queue<TWrite>();
 
         private bool _notifiedSucceeded;
 
@@ -92,7 +93,8 @@ namespace NamedPipeWrapper
         /// <param name="message"></param>
         public void PushMessage(TWrite message)
         {
-            _writeQueue.Add(message);
+            //_writeQueue.Add(message);
+            _writeQueue.Enqueue(message);
             _writeSignal.Set();
         }
 
@@ -163,7 +165,7 @@ namespace NamedPipeWrapper
                     //we must igonre exception, otherwise, the namepipe wrapper will stop work.
                 }
             }
-            
+
         }
 
         /// <summary>
@@ -172,29 +174,30 @@ namespace NamedPipeWrapper
         /// <exception cref="SerializationException">An object in the graph of type parameter <typeparamref name="TWrite"/> is not marked as serializable.</exception>
         private void WritePipe()
         {
-            
-                while (IsConnected && _streamWrapper.CanWrite)
+
+            while (IsConnected && _streamWrapper.CanWrite)
+            {
+                try
                 {
-                    try
+                    //using blockcollection, we needn't use singal to wait for result.
+                    _writeSignal.WaitOne();
+                    while (_writeQueue.Count > 0)
                     {
-                        //using blockcollection, we needn't use singal to wait for result.
-                        //_writeSignal.WaitOne();
-                        //while (_writeQueue.Count > 0)
-                        {
-                            _streamWrapper.WriteObject(_writeQueue.Take());
-                            _streamWrapper.WaitForPipeDrain();
-                        }
+                        //_streamWrapper.WriteObject(_writeQueue.Take());
+                        _streamWrapper.WriteObject(_writeQueue.Dequeue());
+                        _streamWrapper.WaitForPipeDrain();
                     }
-                    catch
-                    {
+                }
+                catch
+                {
                     //we must igonre exception, otherwise, the namepipe wrapper will stop work.
                 }
             }
-          
+
         }
     }
 
-    static class ConnectionFactory
+    internal static class ConnectionFactory
     {
         private static int _lastId;
 
