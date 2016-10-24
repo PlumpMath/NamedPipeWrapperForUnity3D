@@ -6,98 +6,39 @@ using System.IO.Pipes;
 
 namespace NamedPipeWrapper
 {
-    /// <summary>
-    /// Wraps a <see cref="NamedPipeServerStream"/> and provides multiple simultaneous client connection handling.
-    /// </summary>
-    /// <typeparam name="TReadWrite">Reference type to read from and write to the named pipe</typeparam>
-    public class NamedPipeServer<TReadWrite> : Server<TReadWrite, TReadWrite> where TReadWrite : class
+    public class NamedPipeServer<TRead, TWrite> where TRead : class  where TWrite : class
     {
-        /// <summary>
-        /// Constructs a new <c>NamedPipeServer</c> object that listens for client connections on the given <paramref name="pipeName"/>.
-        /// </summary>
-        /// <param name="pipeName">Name of the pipe to listen on</param>
-        public NamedPipeServer(string pipeName)
-            : base(pipeName, null)
-        {
-        }
-
-        ///// Constructs a new <c>NamedPipeServer</c> object that listens for client connections on the given <paramref name="pipeName"/>.
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="pipeName"></param>
-        /// <param name="pipeSecurity"></param>
-        public NamedPipeServer(string pipeName, PipeSecurity pipeSecurity)
-            : base(pipeName, pipeSecurity)
-        {
-        }
-    }
-
-    /// <summary>
-    /// Wraps a <see cref="NamedPipeServerStream"/> and provides multiple simultaneous client connection handling.
-    /// </summary>
-    /// <typeparam name="TRead">Reference type to read from the named pipe</typeparam>
-    /// <typeparam name="TWrite">Reference type to write to the named pipe</typeparam>
-    public class Server<TRead, TWrite>
-        where TRead : class
-        where TWrite : class
-    {
-        /// <summary>
-        /// Invoked whenever a client connects to the server.
-        /// </summary>
         public event ConnectionEventHandler<TRead, TWrite> ClientConnected;
-
-        /// <summary>
-        /// Invoked whenever a client disconnects from the server.
-        /// </summary>
         public event ConnectionEventHandler<TRead, TWrite> ClientDisconnected;
-
-        /// <summary>
-        /// Invoked whenever a client sends a message to the server.
-        /// </summary>
         public event ConnectionMessageEventHandler<TRead, TWrite> ClientMessage;
-
-        /// <summary>
-        /// Invoked whenever an exception is thrown during a read or write operation.
-        /// </summary>
         public event PipeExceptionEventHandler Error;
+        public bool IsRuning { get; private set; }
 
         private readonly string _pipeName;
         private readonly PipeSecurity _pipeSecurity;
         private readonly List<NamedPipeConnection<TRead, TWrite>> _connections = new List<NamedPipeConnection<TRead, TWrite>>();
 
         private int _nextPipeId;
-
         private volatile bool _shouldKeepRunning;
-        //private volatile bool _isRunning;
-
-        ///// Constructs a new <c>NamedPipeServer</c> object that listens for client connections on the given <paramref name="pipeName"/>.
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="pipeName"></param>
-        /// <param name="pipeSecurity"></param>
-        public Server(string pipeName, PipeSecurity pipeSecurity)
+        public NamedPipeServer(string pipeName, PipeSecurity pipeSecurity)
         {
             _pipeName = pipeName;
             _pipeSecurity = pipeSecurity;
         }
 
         /// <summary>
-        /// Begins listening for client connections in a separate background thread.
-        /// This method returns immediately.
+        /// 启动服务端（监听信息）
         /// </summary>
         public void Start()
         {
             _shouldKeepRunning = true;
-            var worker = new Worker();
-            worker.Error += OnError;
-            worker.DoWork(ListenSync);
+            ThreadingWorker threadWork = new ThreadingWorker();
+            threadWork.Error += OnError;
+            threadWork.DoWork(ListenSync);
         }
 
         /// <summary>
-        /// Sends a message to all connected clients asynchronously.
-        /// This method returns immediately, possibly before the message has been sent to all clients.
+        /// 向所有client发送信息
         /// </summary>
         /// <param name="message"></param>
         public void PushMessage(TWrite message)
@@ -110,9 +51,8 @@ namespace NamedPipeWrapper
                 }
             }
         }
-
         /// <summary>
-        /// push message to the given client.
+        /// 向指定客户端发送信息
         /// </summary>
         /// <param name="message"></param>
         /// <param name="clientName"></param>
@@ -148,21 +88,23 @@ namespace NamedPipeWrapper
             //dummy connection will use the local server name.
             var dummyClient = new NamedPipeClient<TRead, TWrite>(_pipeName, ".");
             dummyClient.Start();
-            dummyClient.WaitForConnection(TimeSpan.FromSeconds(2));
+            dummyClient.WaitForConnection(TimeSpan.FromSeconds(1));
             dummyClient.Stop();
-            dummyClient.WaitForDisconnection(TimeSpan.FromSeconds(2));
+            dummyClient.WaitForDisconnection(TimeSpan.FromSeconds(1));
+            OnError(new Exception("正常结束"));
         }
 
         #region Private methods
 
         private void ListenSync()
         {
-            //_isRunning = true;
+            IsRuning = true;
             while (_shouldKeepRunning)
             {
                 WaitForConnection(_pipeName, _pipeSecurity);
+                System.Threading.Thread.Sleep(1000);
             }
-            //_isRunning = false;
+            IsRuning = false;
         }
 
         private void WaitForConnection(string pipeName, PipeSecurity pipeSecurity)
@@ -203,9 +145,11 @@ namespace NamedPipeWrapper
             // Catch the IOException that is raised if the pipe is broken or disconnected.
             catch (Exception e)
             {
-                Console.Error.WriteLine("Named pipe is broken or disconnected: {0}", e);
+                //"Named pipe is broken or disconnected:"
+                OnError(e);
 
                 Cleanup(handshakePipe);
+
                 Cleanup(dataPipe);
 
                 ClientOnDisconnected(connection);
@@ -284,7 +228,7 @@ namespace NamedPipeWrapper
 
         public static NamedPipeServerStream CreatePipe(string pipeName, PipeSecurity pipeSecurity)
         {
-            return new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.WriteThrough, 0, 0, pipeSecurity);
+            return new NamedPipeServerStream(pipeName);//, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.WriteThrough,0,0,pipeSecurity);//, 1000, 1000, pipeSecurity);
         }
     }
 }
